@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+pydantic
+pymongo
+requests
+python-docx
+mail-parser
+langchain
+langchain-community
+pinecone-client
+google-generativeai
