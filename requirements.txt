@@ -7,5 +7,5 @@ python-docx
 mail-parser
 langchain
 langchain-community
-pinecone-client
+pinecone
 google-generativeai
