@@ -18,10 +18,12 @@ PINECONE_API_KEY = "pcsk_28Ad9n_3ysjC12bv8Z91rEou1b9XiZ9RKb1QBF1n4uvKSF3Y9tCHPGJ
 PINECONE_REGION = "us-east-1"
 INDEX_NAME = "doc-index"
 NAMESPACE = "docspace"
-TOP_K = 10
+TOP_K = 15
+TOP_N = 8
 
-GOOGLE_API_KEY = "AIzaSyD-T4YF7ecQBpHsQSMS6pMZ2vghtAYcMVw"
+GOOGLE_API_KEY = "AIzaSyCS-fOKf6oYX9N8rSmzxRkbSPfsd6NXo_Q"
 EMBED_MODEL_NAME = "llama-text-embed-v2"
+RERANKER_MODEL_NAME = "bge-reranker-v2-m3"
 CHUNK_SIZE = 1000
 CHUNK_OVERLAP = 200
 
@@ -111,10 +113,23 @@ def retrieve_and_answer(question: str, namespace: str):
     )
 
     hits = results.get("result", {}).get("hits", [])
+
     if not hits:
         return "No relevant context found to answer the question."
+    
+    chunks = [hit.get("fields", {}).get("chunk_text", "") for hit in hits]
 
-    context = "\n\n".join([hit.get("fields", {}).get("chunk_text", "") for hit in hits])
+    final_results = pc.inference.rerank(
+        model=RERANKER_MODEL_NAME,
+        query=question,
+        documents=chunks,
+        top_n=TOP_N,
+        return_documents=True,
+    )
+
+    reranked_chunks = [item['document']['text'] for item in final_results.data]
+
+    context = "\n\n".join(reranked_chunks)
 
     genai.configure(api_key=GOOGLE_API_KEY)
 
@@ -211,34 +226,35 @@ def process_document_and_answer(blob_url: str, questions: List[str]) -> List[str
 #     blob_url = r"https://hackrx.blob.core.windows.net/assets/policy.pdf?sv=2023-01-03&st=2025-07-04T09%3A11%3A24Z&se=2027-07-05T09%3A11%3A00Z&sr=b&sp=r&sig=N4a9OU0w0QXO6AOIBiu4bpl7AXvEZogeT%2FjUHNO7HzQ%3D"
 #     question_list = [
 #     "What is the grace period for premium payment under the National Parivar Mediclaim Plus Policy?",
-#         "What is the waiting period for pre-existing diseases (PED) to be covered?",
-#         "Does this policy cover maternity expenses, and what are the conditions?",
-#         "What is the waiting period for cataract surgery?",
-#         "Are the medical expenses for an organ donor covered under this policy?",
-#         "What is the No Claim Discount (NCD) offered in this policy?",
-#         "Is there a benefit for preventive health check-ups?",
-#         "How does the policy define a 'Hospital'?",
-#         "What is the extent of coverage for AYUSH treatments?",
-#         "Are there any sub-limits on room rent and ICU charges for Plan A?"
+#     "What is the grace period for premium payment under the policy?"
+#     "What is the waiting period for pre-existing diseases (PED) to be covered?",
+#     "Does this policy cover maternity expenses, and what are the conditions?",
+#     "What is the waiting period for cataract surgery?",
+#     "Are the medical expenses for an organ donor covered under this policy?",
+#     "What is the No Claim Discount (NCD) offered in this policy?",
+#     "Is there a benefit for preventive health check-ups?",
+#     "How does the policy define a 'Hospital'?",
+#     "What is the extent of coverage for AYUSH treatments?",
+#     "Are there any sub-limits on room rent and ICU charges for Plan A?"
 #     ]
 
-#     ## Resuest 2
+    ## Resuest 2
 
-# #     blob_url = r"https://hackrx.blob.core.windows.net/assets/Arogya%20Sanjeevani%20Policy%20-%20CIN%20-%20U10200WB1906GOI001713%201.pdf?sv=2023-01-03&st=2025-07-21T08%3A29%3A02Z&se=2025-09-22T08%3A29%3A00Z&sr=b&sp=r&sig=nzrz1K9Iurt%2BBXom%2FB%2BMPTFMFP3PRnIvEsipAX10Ig4%3D"
-# #     question_list = [
-# #     "What is the minimum hospitalization period required to make a claim?",
-# #     "How much is the room rent covered per day?",
-# #     "What is the waiting period for pre-existing diseases?",
-# #     "What is the pre-hospitalization coverage period?",
-# #     "What is the post-hospitalization coverage period?",
-# #     "What co-payment applies to claims for insured persons aged 75 or less?",
-# #     "Is AYUSH treatment covered under this policy?",
-# #     "What is the cataract treatment limit per eye?",
-# #     "Are maternity expenses covered?",
-# #     "What is the cumulative bonus for claim-free years?"
-# # ]
+#     blob_url = r"https://hackrx.blob.core.windows.net/assets/Arogya%20Sanjeevani%20Policy%20-%20CIN%20-%20U10200WB1906GOI001713%201.pdf?sv=2023-01-03&st=2025-07-21T08%3A29%3A02Z&se=2025-09-22T08%3A29%3A00Z&sr=b&sp=r&sig=nzrz1K9Iurt%2BBXom%2FB%2BMPTFMFP3PRnIvEsipAX10Ig4%3D"
+#     question_list = [
+#     "What is the minimum hospitalization period required to make a claim?",
+#     "How much is the room rent covered per day?",
+#     "What is the waiting period for pre-existing diseases?",
+#     "What is the pre-hospitalization coverage period?",
+#     "What is the post-hospitalization coverage period?",
+#     "What co-payment applies to claims for insured persons aged 75 or less?",
+#     "Is AYUSH treatment covered under this policy?",
+#     "What is the cataract treatment limit per eye?",
+#     "Are maternity expenses covered?",
+#     "What is the cumulative bonus for claim-free years?"
+# ]
 
 
-#     final_answers = process_document_and_answer(blob_url, question_list)
-#     print("\nFinal Answer List:\n", final_answers)
-#     # print(len(final_answers))
+    final_answers = process_document_and_answer(blob_url, question_list)
+    print("\nFinal Answer List:\n", final_answers)
+    # print(len(final_answers))
