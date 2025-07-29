@@ -2,6 +2,7 @@ import os
 import requests
 import tempfile
 import hashlib
+import time
 from typing import List
 from langchain_community.document_loaders import PyPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -175,16 +176,69 @@ Answer Rules:
 
 # ------------------ MAIN FUNCTION ------------------
 
+import time
+
 def process_document_and_answer(blob_url: str, questions: List[str]) -> List[str]:
     doc_id = get_doc_id_from_url(blob_url)
 
     if not check_if_doc_exists(doc_id):
-        pdf_path = fetch_pdf_from_blob_url(blob_url)
-        embed_and_store(pdf_path, doc_id)
-        os.remove(pdf_path)
+        # print("New Doc!")
+        file_ext = os.path.splitext(blob_url.split("?")[0])[1].lower()
+        if file_ext not in [".pdf", ".docx", ".eml"]:
+            raise ValueError("Unsupported file type.")
+        temp_path = fetch_pdf_from_blob_url(blob_url)
+        embed_and_store(temp_path, doc_id)
+        os.remove(temp_path)
+
+        for _ in range(5):
+            time.sleep(1)
+            if check_if_doc_exists(doc_id):
+                break
+
     answers = []
     for q in questions:
         ans = retrieve_and_answer(q, doc_id)
         answers.append(ans)
 
     return answers
+
+## Example
+
+# if __name__ == "__main__":
+
+#     ## Request 1
+
+#     blob_url = r"https://hackrx.blob.core.windows.net/assets/policy.pdf?sv=2023-01-03&st=2025-07-04T09%3A11%3A24Z&se=2027-07-05T09%3A11%3A00Z&sr=b&sp=r&sig=N4a9OU0w0QXO6AOIBiu4bpl7AXvEZogeT%2FjUHNO7HzQ%3D"
+#     question_list = [
+#     "What is the grace period for premium payment under the National Parivar Mediclaim Plus Policy?",
+#         "What is the waiting period for pre-existing diseases (PED) to be covered?",
+#         "Does this policy cover maternity expenses, and what are the conditions?",
+#         "What is the waiting period for cataract surgery?",
+#         "Are the medical expenses for an organ donor covered under this policy?",
+#         "What is the No Claim Discount (NCD) offered in this policy?",
+#         "Is there a benefit for preventive health check-ups?",
+#         "How does the policy define a 'Hospital'?",
+#         "What is the extent of coverage for AYUSH treatments?",
+#         "Are there any sub-limits on room rent and ICU charges for Plan A?"
+#     ]
+
+#     ## Resuest 2
+
+# #     blob_url = r"https://hackrx.blob.core.windows.net/assets/Arogya%20Sanjeevani%20Policy%20-%20CIN%20-%20U10200WB1906GOI001713%201.pdf?sv=2023-01-03&st=2025-07-21T08%3A29%3A02Z&se=2025-09-22T08%3A29%3A00Z&sr=b&sp=r&sig=nzrz1K9Iurt%2BBXom%2FB%2BMPTFMFP3PRnIvEsipAX10Ig4%3D"
+# #     question_list = [
+# #     "What is the minimum hospitalization period required to make a claim?",
+# #     "How much is the room rent covered per day?",
+# #     "What is the waiting period for pre-existing diseases?",
+# #     "What is the pre-hospitalization coverage period?",
+# #     "What is the post-hospitalization coverage period?",
+# #     "What co-payment applies to claims for insured persons aged 75 or less?",
+# #     "Is AYUSH treatment covered under this policy?",
+# #     "What is the cataract treatment limit per eye?",
+# #     "Are maternity expenses covered?",
+# #     "What is the cumulative bonus for claim-free years?"
+# # ]
+
+
+#     final_answers = process_document_and_answer(blob_url, question_list)
+#     print("\nFinal Answer List:\n", final_answers)
+#     # print(len(final_answers))
