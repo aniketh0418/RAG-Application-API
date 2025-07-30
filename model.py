@@ -152,32 +152,67 @@ def retrieve_and_answer(question: str, namespace: str):
         model_name="gemini-2.5-flash",
         safety_settings=safety_settings,
         generation_config=generation_config,
-        system_instruction = f"""You are a concise and reliable assistant that answers insurance policy questions using only the provided document context.
+#         system_instruction = f"""You are a concise and reliable assistant that answers insurance policy questions using only the provided document context.
 
-Respond in a formal, insurance-style tone using ONLY information from the retrieved context. Do not add assumptions or general knowledge.
+# Respond in a formal, insurance-style tone using ONLY information from the retrieved context. Do not add assumptions or general knowledge.
 
-Word Limit Strategy:
-- If the answer is straightforward, answer in 15 - 20 words max.
-- If the answer includes multiple clauses or conditions, answer in 45 - 50 words max using commas or semicolons to stay brief.
-- Never exceed 50 words under any circumstance.
+# Word Limit Strategy:
+# - If the answer is straightforward, answer in 15 - 20 words max.
+# - If the answer includes multiple clauses or conditions, answer in 45 - 50 words max using commas or semicolons to stay brief.
+# - Never exceed 50 words under any circumstance.
 
-Answer Rules:
-- Only begin the answer with “Yes,” or “No,” if the question clearly expects a binary response — i.e., starts with “Is”, “Does”, “Can”, “Are”, “Will”, etc.
-- Do NOT begin with “Yes,” or “No,” for questions that start with “What”, “When”, “How”, “Why”, “Where”, etc.
-- Be clear, precise, and legal-sounding.
-- Use structured insurance terms like “Sum Insured,” “waiting period,” “covered,” “excluded,” etc.
-- Do not repeat the question or include disclaimers.
+# Answer Rules:
+# - Only begin the answer with “Yes,” or “No,” if the question clearly expects a binary response — i.e., starts with “Is”, “Does”, “Can”, “Are”, “Will”, etc.
+# - Do NOT begin with “Yes,” or “No,” for questions that start with “What”, “When”, “How”, “Why”, “Where”, etc.
+# - Be clear, precise, and legal-sounding.
+# - Use structured insurance terms like “Sum Insured,” “waiting period,” “covered,” “excluded,” etc.
+# - Do not repeat the question or include disclaimers.
 
 
-        Document Context:
-        {context}
+#         Document Context:
+#         {context}
 
-        Question:
-        {question}
+#         Question:
+#         {question}
 
-        Answer:"""
+#         Answer:"""
 
-    )
+#     )
+
+        system_instruction = f"""
+You are a formal and precise assistant (like a human in the backend) that answers insurance policy questions strictly using the provided document context.
+
+Objective:
+Craft answers that are concise, accurate, and match the phrasing and tone typically found in insurance policy documents. Avoid paraphrasing — prefer **verbatim extraction** from context whenever possible.
+
+Answer Formatting Rules:
+- Respond using complete sentences that sound like policy clauses or contractual statements.
+- If the context contains a policy clause that answers the question, extract or closely imitate that clause.
+- Begin with “Yes,” or “No,” only if the question expects a binary response (i.e., starts with “Is”, “Does”, “Can”, “Are”, etc.).
+- Do NOT begin with “Yes,” or “No,” for descriptive questions (i.e., “What”, “When”, “How”, etc.).
+- Use domain-specific terms such as “Sum Insured”, “Grace Period”, “waiting period”, “excluded”, “indemnified”, etc., according to the question and context.
+
+Strict Output Rules:
+- Do NOT make assumptions or include general knowledge.
+- Do NOT include disclaimers, question restatement, or introductory phrases.
+- End every sentence with a **period**.
+- The answer must be a **single sentence or double sentanced** accord under 50 words.
+- Never mention "Based on the context..." or "According to the document...".
+- Prefer shorter clauses from the document instead of full paragraph-length sentences. Avoid excessive elaboration or restating policy names.
+
+Style Preference:
+- Use legal-style phrasing that mimics policy the text style present in the context.
+- Maintain a neutral, natural, and professional tone.
+
+===============================
+Document Context:
+{context}
+
+Question:
+{question}
+
+Answer:""")
+
 
 
     try:
@@ -223,20 +258,20 @@ def process_document_and_answer(blob_url: str, questions: List[str]) -> List[str
 
 #     ## Request 1
 
-#     blob_url = r"https://hackrx.blob.core.windows.net/assets/policy.pdf?sv=2023-01-03&st=2025-07-04T09%3A11%3A24Z&se=2027-07-05T09%3A11%3A00Z&sr=b&sp=r&sig=N4a9OU0w0QXO6AOIBiu4bpl7AXvEZogeT%2FjUHNO7HzQ%3D"
-#     question_list = [
-#     "What is the grace period for premium payment under the National Parivar Mediclaim Plus Policy?",
-#     "What is the grace period for premium payment under the policy?"
-#     "What is the waiting period for pre-existing diseases (PED) to be covered?",
-#     "Does this policy cover maternity expenses, and what are the conditions?",
-#     "What is the waiting period for cataract surgery?",
-#     "Are the medical expenses for an organ donor covered under this policy?",
-#     "What is the No Claim Discount (NCD) offered in this policy?",
-#     "Is there a benefit for preventive health check-ups?",
-#     "How does the policy define a 'Hospital'?",
-#     "What is the extent of coverage for AYUSH treatments?",
-#     "Are there any sub-limits on room rent and ICU charges for Plan A?"
-#     ]
+    # blob_url = r"https://hackrx.blob.core.windows.net/assets/policy.pdf?sv=2023-01-03&st=2025-07-04T09%3A11%3A24Z&se=2027-07-05T09%3A11%3A00Z&sr=b&sp=r&sig=N4a9OU0w0QXO6AOIBiu4bpl7AXvEZogeT%2FjUHNO7HzQ%3D"
+    # question_list = [
+    # "What is the grace period for premium payment under the National Parivar Mediclaim Plus Policy?",
+    # "What is the grace period for premium payment under the policy?",
+    # "What is the waiting period for pre-existing diseases (PED) to be covered?",
+    # "Does this policy cover maternity expenses, and what are the conditions?",
+    # "What is the waiting period for cataract surgery?",
+    # "Are the medical expenses for an organ donor covered under this policy?",
+    # "What is the No Claim Discount (NCD) offered in this policy?",
+    # "Is there a benefit for preventive health check-ups?",
+    # "How does the policy define a 'Hospital'?",
+    # "What is the extent of coverage for AYUSH treatments?",
+    # "Are there any sub-limits on room rent and ICU charges for Plan A?"
+    # ]
 
     ## Resuest 2
 
@@ -255,6 +290,6 @@ def process_document_and_answer(blob_url: str, questions: List[str]) -> List[str
 # ]
 
 
-    final_answers = process_document_and_answer(blob_url, question_list)
-    print("\nFinal Answer List:\n", final_answers)
-    # print(len(final_answers))
+    # final_answers = process_document_and_answer(blob_url, question_list)
+    # print("\nFinal Answer List:\n", final_answers)
+    # # print(len(final_answers))
