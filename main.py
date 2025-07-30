@@ -4,6 +4,7 @@ from typing import List
 from datetime import datetime
 from pymongo import MongoClient
 import os
+import time
 
 from model import process_document_and_answer
 
@@ -35,7 +36,11 @@ async def run_hackrx_query(payload: QueryRequest, authorization: str = Header(..
         raise HTTPException(status_code=403, detail="Invalid or unauthorized token")
 
     try:
+        start_time = time.time()
         answers = process_document_and_answer(payload.documents, payload.questions)
+        end_time = time.time()
+
+        response_time_sec = round(end_time - start_time, 4)
 
         # --- Log to MongoDB ---
         now = datetime.now()
@@ -47,7 +52,8 @@ async def run_hackrx_query(payload: QueryRequest, authorization: str = Header(..
             "doc_type": doc_type,
             "doc_url": payload.documents,
             "queries": payload.questions,
-            "answers": answers
+            "answers": answers,
+            "response_time_seconds": response_time_sec
         }
         collection.insert_one(log_entry)
 
