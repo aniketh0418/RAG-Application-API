@@ -152,33 +152,6 @@ def retrieve_and_answer(question: str, namespace: str):
         model_name="gemini-2.5-flash",
         safety_settings=safety_settings,
         generation_config=generation_config,
-#         system_instruction = f"""You are a concise and reliable assistant that answers insurance policy questions using only the provided document context.
-
-# Respond in a formal, insurance-style tone using ONLY information from the retrieved context. Do not add assumptions or general knowledge.
-
-# Word Limit Strategy:
-# - If the answer is straightforward, answer in 15 - 20 words max.
-# - If the answer includes multiple clauses or conditions, answer in 45 - 50 words max using commas or semicolons to stay brief.
-# - Never exceed 50 words under any circumstance.
-
-# Answer Rules:
-# - Only begin the answer with “Yes,” or “No,” if the question clearly expects a binary response — i.e., starts with “Is”, “Does”, “Can”, “Are”, “Will”, etc.
-# - Do NOT begin with “Yes,” or “No,” for questions that start with “What”, “When”, “How”, “Why”, “Where”, etc.
-# - Be clear, precise, and legal-sounding.
-# - Use structured insurance terms like “Sum Insured,” “waiting period,” “covered,” “excluded,” etc.
-# - Do not repeat the question or include disclaimers.
-
-
-#         Document Context:
-#         {context}
-
-#         Question:
-#         {question}
-
-#         Answer:"""
-
-#     )
-
         system_instruction = f"""
 You are a formal and precise assistant (like a human in the backend) that answers insurance policy questions strictly using the provided document context.
 
@@ -196,13 +169,16 @@ Strict Output Rules:
 - Do NOT make assumptions or include general knowledge.
 - Do NOT include disclaimers, question restatement, or introductory phrases.
 - End every sentence with a **period**.
-- The answer must be a **single sentence or double sentanced** accord under 50 words.
+- The answer must be a **single sentence or double sentanced** accord under 50 words, if more important details are to be covered - keep it under 60 words.
 - Never mention "Based on the context..." or "According to the document...".
 - Prefer shorter clauses from the document instead of full paragraph-length sentences. Avoid excessive elaboration or restating policy names.
+- Maintain a human-like tone—**never reveal that the answer is coming from a document**.
+- Include all the required **key-words** in the answer, with respect to the question and context.
 
 Style Preference:
 - Use legal-style phrasing that mimics policy the text style present in the context.
 - Maintain a neutral, natural, and professional tone.
+- Strictly maintain simple language, don't give complicative answer that is not easy to understand on a single read with respect to the question.
 
 ===============================
 Document Context:
@@ -211,7 +187,10 @@ Document Context:
 Question:
 {question}
 
-Answer:""")
+Answer:"""
+
+
+)
 
 
 
@@ -251,45 +230,3 @@ def process_document_and_answer(blob_url: str, questions: List[str]) -> List[str
         answers.append(ans)
 
     return answers
-
-## Example
-
-# if __name__ == "__main__":
-
-#     ## Request 1
-
-    # blob_url = r"https://hackrx.blob.core.windows.net/assets/policy.pdf?sv=2023-01-03&st=2025-07-04T09%3A11%3A24Z&se=2027-07-05T09%3A11%3A00Z&sr=b&sp=r&sig=N4a9OU0w0QXO6AOIBiu4bpl7AXvEZogeT%2FjUHNO7HzQ%3D"
-    # question_list = [
-    # "What is the grace period for premium payment under the National Parivar Mediclaim Plus Policy?",
-    # "What is the grace period for premium payment under the policy?",
-    # "What is the waiting period for pre-existing diseases (PED) to be covered?",
-    # "Does this policy cover maternity expenses, and what are the conditions?",
-    # "What is the waiting period for cataract surgery?",
-    # "Are the medical expenses for an organ donor covered under this policy?",
-    # "What is the No Claim Discount (NCD) offered in this policy?",
-    # "Is there a benefit for preventive health check-ups?",
-    # "How does the policy define a 'Hospital'?",
-    # "What is the extent of coverage for AYUSH treatments?",
-    # "Are there any sub-limits on room rent and ICU charges for Plan A?"
-    # ]
-
-    ## Resuest 2
-
-#     blob_url = r"https://hackrx.blob.core.windows.net/assets/Arogya%20Sanjeevani%20Policy%20-%20CIN%20-%20U10200WB1906GOI001713%201.pdf?sv=2023-01-03&st=2025-07-21T08%3A29%3A02Z&se=2025-09-22T08%3A29%3A00Z&sr=b&sp=r&sig=nzrz1K9Iurt%2BBXom%2FB%2BMPTFMFP3PRnIvEsipAX10Ig4%3D"
-#     question_list = [
-#     "What is the minimum hospitalization period required to make a claim?",
-#     "How much is the room rent covered per day?",
-#     "What is the waiting period for pre-existing diseases?",
-#     "What is the pre-hospitalization coverage period?",
-#     "What is the post-hospitalization coverage period?",
-#     "What co-payment applies to claims for insured persons aged 75 or less?",
-#     "Is AYUSH treatment covered under this policy?",
-#     "What is the cataract treatment limit per eye?",
-#     "Are maternity expenses covered?",
-#     "What is the cumulative bonus for claim-free years?"
-# ]
-
-
-    # final_answers = process_document_and_answer(blob_url, question_list)
-    # print("\nFinal Answer List:\n", final_answers)
-    # # print(len(final_answers))
