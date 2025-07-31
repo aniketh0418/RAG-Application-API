@@ -22,8 +22,9 @@ TOP_K = 15
 TOP_N = 8
 
 GOOGLE_API_KEY = "AIzaSyCS-fOKf6oYX9N8rSmzxRkbSPfsd6NXo_Q"
+GEMINI_MODEL = "gemini-2.0-flash-lite"
 EMBED_MODEL_NAME = "llama-text-embed-v2"
-RERANKER_MODEL_NAME = "bge-reranker-v2-m3"
+RERANKER_MODEL_NAME = "pinecone-rerank-v0"
 CHUNK_SIZE = 1000
 CHUNK_OVERLAP = 200
 
@@ -149,7 +150,7 @@ def retrieve_and_answer(question: str, namespace: str):
     ]
 
     model = genai.GenerativeModel(
-        model_name="gemini-2.5-flash",
+        model_name=GEMINI_MODEL,
         safety_settings=safety_settings,
         generation_config=generation_config,
         system_instruction = f"""
