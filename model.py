@@ -23,7 +23,7 @@ TOP_N = 8
 LLM_API_KEY = "Xum09rLjdkRxsBN67AyzfO4eVGaiaSxF"
 LLM_MODEL = "mistral-large-latest"
 EMBED_MODEL_NAME = "llama-text-embed-v2"
-RERANKER_MODEL_NAME = "pinecone-rerank-512"
+RERANKER_MODEL_NAME = "pinecone-rerank-v0"
 CHUNK_SIZE = 1000
 CHUNK_OVERLAP = 200
 
