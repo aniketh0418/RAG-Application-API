@@ -10,7 +10,7 @@ from langchain.schema import Document as LangchainDoc
 from docx import Document as DocxDocument
 import mailparser
 from pinecone import Pinecone
-import google.generativeai as genai
+from mistralai import Mistral
 
 # ------------------ CONFIG ------------------
 
@@ -18,13 +18,12 @@ PINECONE_API_KEY = "pcsk_28Ad9n_3ysjC12bv8Z91rEou1b9XiZ9RKb1QBF1n4uvKSF3Y9tCHPGJ
 PINECONE_REGION = "us-east-1"
 INDEX_NAME = "doc-index"
 NAMESPACE = "docspace"
-TOP_K = 15
+TOP_K = 8
 TOP_N = 8
-
-GOOGLE_API_KEY = "AIzaSyCS-fOKf6oYX9N8rSmzxRkbSPfsd6NXo_Q"
-GEMINI_MODEL = "gemini-2.0-flash-lite"
+LLM_API_KEY = "Xum09rLjdkRxsBN67AyzfO4eVGaiaSxF"
+LLM_MODEL = "mistral-large-latest"
 EMBED_MODEL_NAME = "llama-text-embed-v2"
-RERANKER_MODEL_NAME = "pinecone-rerank-v0"
+RERANKER_MODEL_NAME = "pinecone-rerank-512"
 CHUNK_SIZE = 1000
 CHUNK_OVERLAP = 200
 
@@ -130,78 +129,61 @@ def retrieve_and_answer(question: str, namespace: str):
 
     reranked_chunks = [item['document']['text'] for item in final_results.data]
 
-    context = "\n\n".join(reranked_chunks)
+    context = "\n\n".join(chunks)
 
-    genai.configure(api_key=GOOGLE_API_KEY)
+    client = Mistral(api_key=LLM_API_KEY)
 
-    generation_config = {
-        "temperature": 2,
-        "top_p": 0.95,
-        "top_k": 40,
-        "max_output_tokens": 8192,
-        "response_mime_type": "text/plain",
-    }
+    fine_tuning_prompt = f"""
+    You are a formal and precise assistant (like a human in the backend) that answers insurance policy questions strictly using the provided document context.
 
-    safety_settings = [
-        {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
-        {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
-        {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
-        {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
-    ]
+    Objective:
+    Craft answers that are concise, accurate, and match the phrasing and tone typically found in insurance policy documents. Avoid paraphrasing — prefer **verbatim extraction** from context whenever possible.
 
-    model = genai.GenerativeModel(
-        model_name=GEMINI_MODEL,
-        safety_settings=safety_settings,
-        generation_config=generation_config,
-        system_instruction = f"""
-You are a formal and precise assistant (like a human in the backend) that answers insurance policy questions strictly using the provided document context.
+    Answer Formatting Rules:
+    - Respond using complete sentences that sound like policy clauses or contractual statements.
+    - If the context contains a policy clause that answers the question, extract or closely imitate that clause.
+    - Begin with “Yes,” or “No,” only if the question expects a binary response (i.e., starts with “Is”, “Does”, “Can”, “Are”, etc.).
+    - Do NOT begin with “Yes,” or “No,” for descriptive questions (i.e., “What”, “When”, “How”, etc.).
+    - Use domain-specific terms such as “Sum Insured”, “Grace Period”, “waiting period”, “excluded”, “indemnified”, etc., according to the question and context.
 
-Objective:
-Craft answers that are concise, accurate, and match the phrasing and tone typically found in insurance policy documents. Avoid paraphrasing — prefer **verbatim extraction** from context whenever possible.
+    Strict Output Rules:
+    - Do NOT make assumptions or include general knowledge.
+    - Do NOT include disclaimers, question restatement, or introductory phrases.
+    - End every sentence with a **period**.
+    - The answer must be a **single sentence or double sentanced** accord under 50 words, if more important details are to be covered - keep it under 60 words.
+    - Never mention "Based on the context..." or "According to the document...".
+    - Prefer shorter clauses from the document instead of full paragraph-length sentences. Avoid excessive elaboration or restating policy names.
+    - Maintain a human-like tone—**never reveal that the answer is coming from a document**.
+    - Include all the required **key-words** in the answer, with respect to the question and context.
 
-Answer Formatting Rules:
-- Respond using complete sentences that sound like policy clauses or contractual statements.
-- If the context contains a policy clause that answers the question, extract or closely imitate that clause.
-- Begin with “Yes,” or “No,” only if the question expects a binary response (i.e., starts with “Is”, “Does”, “Can”, “Are”, etc.).
-- Do NOT begin with “Yes,” or “No,” for descriptive questions (i.e., “What”, “When”, “How”, etc.).
-- Use domain-specific terms such as “Sum Insured”, “Grace Period”, “waiting period”, “excluded”, “indemnified”, etc., according to the question and context.
+    Style Preference:
+    - Use legal-style phrasing that mimics policy the text style present in the context.
+    - Maintain a neutral, natural, and professional tone.
+    - Strictly maintain simple language, don't give complicative answer that is not easy to understand on a single read with respect to the question.
 
-Strict Output Rules:
-- Do NOT make assumptions or include general knowledge.
-- Do NOT include disclaimers, question restatement, or introductory phrases.
-- End every sentence with a **period**.
-- The answer must be a **single sentence or double sentanced** accord under 50 words, if more important details are to be covered - keep it under 60 words.
-- Never mention "Based on the context..." or "According to the document...".
-- Prefer shorter clauses from the document instead of full paragraph-length sentences. Avoid excessive elaboration or restating policy names.
-- Maintain a human-like tone—**never reveal that the answer is coming from a document**.
-- Include all the required **key-words** in the answer, with respect to the question and context.
+    ===============================
+    Document Context:
+    {context}
 
-Style Preference:
-- Use legal-style phrasing that mimics policy the text style present in the context.
-- Maintain a neutral, natural, and professional tone.
-- Strictly maintain simple language, don't give complicative answer that is not easy to understand on a single read with respect to the question.
+    Question:
+    {question}
 
-===============================
-Document Context:
-{context}
+    Answer:"""
 
-Question:
-{question}
-
-Answer:"""
-
-
-)
-
-
-
-    try:
-        response = model.generate_content(
-            contents=[{"role": "user", "parts": [f"{question}\n\n{context}"]}]
-        )
-        return response.text.strip()
-    except Exception as e:
-        return f"Error generating response: {e}"
+    while True:
+        try:
+            messages = [
+                {
+                    "role": "user", "content": fine_tuning_prompt
+                }
+            ]
+            chat_response = client.chat.complete(
+                model=LLM_MODEL,
+                messages=messages
+            )
+            return (chat_response.choices[0].message.content)
+        except Exception as e:
+            continue
     
 
 # ------------------ MAIN FUNCTION ------------------
