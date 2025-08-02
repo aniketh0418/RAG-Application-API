@@ -19,11 +19,11 @@ PINECONE_REGION = "us-east-1"
 INDEX_NAME = "doc-index"
 NAMESPACE = "docspace"
 TOP_K = 8
-TOP_N = 8
+# TOP_N = 8
 LLM_API_KEY = "Xum09rLjdkRxsBN67AyzfO4eVGaiaSxF"
 LLM_MODEL = "mistral-large-latest"
 EMBED_MODEL_NAME = "llama-text-embed-v2"
-RERANKER_MODEL_NAME = "pinecone-rerank-v0"
+# RERANKER_MODEL_NAME = "pinecone-rerank-v0"
 CHUNK_SIZE = 1000
 CHUNK_OVERLAP = 200
 
@@ -69,11 +69,16 @@ def fetch_pdf_from_blob_url(blob_url: str) -> str:
     temp_file.close()
     return temp_file.name
 
-def check_if_doc_exists(doc_id: str) -> bool:
-    stats = index.describe_index_stats()
-    return doc_id in stats.get("namespaces", {})
+def check_if_doc_exists(blob_url: str, vector_dim: int = 1024) -> bool:
+    response = index.query(
+        vector=[0.0] * vector_dim,
+        top_k=1,
+        namespace=NAMESPACE,
+        filter={"blob_url": {"$eq": blob_url}}
+    )
+    return len(response.get("matches", [])) > 0
 
-def embed_and_store(file_path: str, doc_id: str):
+def embed_and_store(file_path: str, doc_id: str, blob_url: str):
     ext = os.path.splitext(file_path)[1].lower()
 
     if ext == ".pdf":
@@ -93,21 +98,26 @@ def embed_and_store(file_path: str, doc_id: str):
         records.append({
             "id": f"{doc_id}_{i}",
             "chunk_text": chunk.page_content,
-            "doc_id": doc_id
+            "doc_id": str(doc_id),
+            "blob_url": str(blob_url),
+            "chunk_index": str(i)
         })
 
     BATCH_SIZE = 96
     for i in range(0, len(records), BATCH_SIZE):
         batch = records[i:i + BATCH_SIZE]
-        index.upsert_records(namespace=doc_id, records=batch)
+        index.upsert_records(namespace=NAMESPACE, records=batch)
 
-def retrieve_and_answer(question: str, namespace: str):
+def retrieve_and_answer(question: str, blob_url: str):
     results = index.search(
-        namespace=namespace,
+        namespace=NAMESPACE,
         query={
             "top_k": TOP_K,
             "inputs": {
                 "text": question
+            },
+            "filter": {
+                "blob_url": blob_url
             }
         }
     )
@@ -119,47 +129,22 @@ def retrieve_and_answer(question: str, namespace: str):
     
     chunks = [hit.get("fields", {}).get("chunk_text", "") for hit in hits]
 
-    final_results = pc.inference.rerank(
-        model=RERANKER_MODEL_NAME,
-        query=question,
-        documents=chunks,
-        top_n=TOP_N,
-        return_documents=True,
-    )
+    # final_results = pc.inference.rerank(
+    #     model=RERANKER_MODEL_NAME,
+    #     query=question,
+    #     documents=chunks,
+    #     top_n=TOP_N,
+    #     return_documents=True,
+    # )
 
-    reranked_chunks = [item['document']['text'] for item in final_results.data]
+    # reranked_chunks = [item['document']['text'] for item in final_results.data]
 
     context = "\n\n".join(chunks)
 
     client = Mistral(api_key=LLM_API_KEY)
 
     fine_tuning_prompt = f"""
-    You are a formal and precise assistant (like a human in the backend) that answers insurance policy questions strictly using the provided document context.
-
-    Objective:
-    Craft answers that are concise, accurate, and match the phrasing and tone typically found in insurance policy documents. Avoid paraphrasing — prefer **verbatim extraction** from context whenever possible.
-
-    Answer Formatting Rules:
-    - Respond using complete sentences that sound like policy clauses or contractual statements.
-    - If the context contains a policy clause that answers the question, extract or closely imitate that clause.
-    - Begin with “Yes,” or “No,” only if the question expects a binary response (i.e., starts with “Is”, “Does”, “Can”, “Are”, etc.).
-    - Do NOT begin with “Yes,” or “No,” for descriptive questions (i.e., “What”, “When”, “How”, etc.).
-    - Use domain-specific terms such as “Sum Insured”, “Grace Period”, “waiting period”, “excluded”, “indemnified”, etc., according to the question and context.
-
-    Strict Output Rules:
-    - Do NOT make assumptions or include general knowledge.
-    - Do NOT include disclaimers, question restatement, or introductory phrases.
-    - End every sentence with a **period**.
-    - The answer must be a **single sentence or double sentanced** accord under 50 words, if more important details are to be covered - keep it under 60 words.
-    - Never mention "Based on the context..." or "According to the document...".
-    - Prefer shorter clauses from the document instead of full paragraph-length sentences. Avoid excessive elaboration or restating policy names.
-    - Maintain a human-like tone—**never reveal that the answer is coming from a document**.
-    - Include all the required **key-words** in the answer, with respect to the question and context.
-
-    Style Preference:
-    - Use legal-style phrasing that mimics policy the text style present in the context.
-    - Maintain a neutral, natural, and professional tone.
-    - Strictly maintain simple language, don't give complicative answer that is not easy to understand on a single read with respect to the question.
+    You are a human assistant in the backend, provided is the context and question that you must answer within 50 to 60 words (2 lines) maximum depending on the intent required to cover. If it looks like a simple and short question that does not require long answer keep it one-lined. Make sure to cover all the important details (also cover any numerical specifications mentioned) as per the context with respect to the question. MAKE SURE THE ANSWER'S INTENT IS COMPLETELY SOLVING THE QUESTION. Use the language and wording format present in the question with respect to the context, just in the way of how a human would have do it, if he was given a document and questions to answer. Humanize your answer. Complete your answer well, close the answer well according to the question. If the context contains a policy clause that answers the question, extract and closely imitate that clause with some rehprasing in order to present the answer in the question's tone. Begin with “Yes,” or “No,” only if the question expects a binary response (i.e., starts with “Is”, “Does”, “Can”, “Are”, etc.). Do NOT begin with “Yes,” or “No,” for descriptive questions (i.e., “What”, “When”, “How”, etc.). Try to maintain simple language. Minimal rephrasing is allowed. Do NOT disclose that you are getting the context from a document in any manner and if any question asked is out of context, responsed politely that you can not answer it because it is out of your context or knowledge - remember you are like a human in the backend, who does not point out to any document or explicit context. 
 
     ===============================
     Document Context:
@@ -188,28 +173,22 @@ def retrieve_and_answer(question: str, namespace: str):
 
 # ------------------ MAIN FUNCTION ------------------
 
-import time
-
 def process_document_and_answer(blob_url: str, questions: List[str]) -> List[str]:
     doc_id = get_doc_id_from_url(blob_url)
 
-    if not check_if_doc_exists(doc_id):
-        # print("New Doc!")
-        file_ext = os.path.splitext(blob_url.split("?")[0])[1].lower()
-        if file_ext not in [".pdf", ".docx", ".eml"]:
-            raise ValueError("Unsupported file type.")
+    if not check_if_doc_exists(blob_url):
         temp_path = fetch_pdf_from_blob_url(blob_url)
-        embed_and_store(temp_path, doc_id)
+        embed_and_store(temp_path, doc_id, blob_url)
         os.remove(temp_path)
 
-        for _ in range(5):
+        for _ in range(10):
             time.sleep(1)
             if check_if_doc_exists(doc_id):
                 break
 
     answers = []
     for q in questions:
-        ans = retrieve_and_answer(q, doc_id)
+        ans = retrieve_and_answer(q, blob_url)
         answers.append(ans)
 
     return answers
