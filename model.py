@@ -10,7 +10,7 @@ from langchain.schema import Document as LangchainDoc
 from docx import Document as DocxDocument
 import mailparser
 from pinecone import Pinecone
-from mistralai import Mistral
+from openai import OpenAI
 
 # ------------------ CONFIG ------------------
 
@@ -19,11 +19,10 @@ PINECONE_REGION = "us-east-1"
 INDEX_NAME = "doc-index"
 NAMESPACE = "docspace"
 TOP_K = 8
-# TOP_N = 8
-LLM_API_KEY = "Xum09rLjdkRxsBN67AyzfO4eVGaiaSxF"
-LLM_MODEL = "mistral-large-latest"
+LLM_API_KEY = "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"
+LLM_MODEL = "openai/gpt-oss-120b"
+LLM_BASE_URL = "https://openrouter.ai/api/v1"
 EMBED_MODEL_NAME = "llama-text-embed-v2"
-# RERANKER_MODEL_NAME = "pinecone-rerank-v0"
 CHUNK_SIZE = 1000
 CHUNK_OVERLAP = 200
 
@@ -129,25 +128,13 @@ def retrieve_and_answer(question: str, blob_url: str):
     
     chunks = [hit.get("fields", {}).get("chunk_text", "") for hit in hits]
 
-    # final_results = pc.inference.rerank(
-    #     model=RERANKER_MODEL_NAME,
-    #     query=question,
-    #     documents=chunks,
-    #     top_n=TOP_N,
-    #     return_documents=True,
-    # )
-
-    # reranked_chunks = [item['document']['text'] for item in final_results.data]
-
     context = "\n\n".join(chunks)
-
-    client = Mistral(api_key=LLM_API_KEY)
 
     fine_tuning_prompt = f"""
     You are a knowledgeable human assistant answering questions based on the given context. Your job is to provide short, direct answers only from the context provided (within 50 - 60 words) that solve the user's intent from the question. Follow these rules:
 
     - Understand the question and given context well, think like a human to answer well and solve the user's intent from the question.
-    - If the context **does not contain information** necessary to answer the question, respond politely that you **don't have the information** to answer it and **DO NOT fabricate an answer** or mention any "context" or "document".
+    - If the context **does not contain information** necessary to answer the question, respond politely that you **don't have the information**.
     - Never disclose, mention, or imply that you are using an external document or context. You are just answering as a knowledgeable human would.
     - If the question is short or simple, keep your response to one line.
     - Always use the same terminology and tone as the question to sound natural and human-like.
@@ -169,23 +156,23 @@ def retrieve_and_answer(question: str, blob_url: str):
 
     Answer:"""
 
-    while True:
-        try:
-            messages = [
-                {
-                    "role": "user", "content": fine_tuning_prompt
-                }
-            ]
-            chat_response = client.chat.complete(
-                model=LLM_MODEL,
-                messages=messages
-            )
-            return (chat_response.choices[0].message.content)
-        except Exception as e:
-            continue
-    
+    client = OpenAI(
+    base_url=LLM_BASE_URL,
+    api_key=LLM_API_KEY,
+    )
 
-# ------------------ MAIN FUNCTION ------------------
+    completion = client.chat.completions.create(
+
+    model=LLM_MODEL,
+    messages=[
+            {
+                "role": "user",
+                "content": fine_tuning_prompt
+            }
+        ]
+    )
+
+    return completion.choices[0].message.content
 
 def process_document_and_answer(blob_url: str, questions: List[str]) -> List[str]:
     doc_id = get_doc_id_from_url(blob_url)
