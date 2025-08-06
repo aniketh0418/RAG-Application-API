@@ -10,4 +10,4 @@ langchain-community
 pinecone
 google-generativeai
 pypdf
-mistralai
+openai
