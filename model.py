@@ -23,15 +23,15 @@ PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 PINECONE_REGION = os.getenv("PINECONE_REGION")
 INDEX_NAME = os.getenv("INDEX_NAME")
 NAMESPACE = os.getenv("NAMESPACE")
-TOP_K = int(os.getenv("TOP_K"))
-TOP_N = int(os.getenv("TOP_N"))
+TOP_K = os.getenv("TOP_K")
+TOP_N = os.getenv("TOP_N")
 LLM_API_KEY = os.getenv("LLM_API_KEY")
 LLM_MODEL = os.getenv("LLM_MODEL")
 LLM_BASE_URL = os.getenv("LLM_BASE_URL")
 EMBED_MODEL_NAME = os.getenv("EMBED_MODEL_NAME")
 RERANKER_MODEL_NAME = os.getenv("RERANKER_MODEL_NAME")
-CHUNK_SIZE = int(os.getenv("CHUNK_SIZE"))
-CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP"))
+CHUNK_SIZE = os.getenv("CHUNK_SIZE")
+CHUNK_OVERLAP = os.getenv("CHUNK_OVERLAP")
 
 # Initialize Pinecone
 pc = Pinecone(api_key=PINECONE_API_KEY)
@@ -48,7 +48,7 @@ if not pc.has_index(INDEX_NAME):
     )
 
 index = pc.Index(INDEX_NAME)
-text_splitter = RecursiveCharacterTextSplitter(chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP)
+text_splitter = RecursiveCharacterTextSplitter(chunk_size=int(CHUNK_SIZE), chunk_overlap=int(CHUNK_OVERLAP))
 
 # ------------------ UTILS ------------------
 
@@ -118,7 +118,7 @@ def retrieve_and_answer(question: str, blob_url: str):
     results = index.search(
         namespace=NAMESPACE,
         query={
-            "top_k": TOP_K,
+            "top_k": int(TOP_K),
             "inputs": {
                 "text": question
             },
@@ -139,7 +139,7 @@ def retrieve_and_answer(question: str, blob_url: str):
         model=RERANKER_MODEL_NAME,
         query=question,
         documents=chunks,
-        top_n=TOP_N,
+        top_n=int(TOP_N),
         return_documents=True,
     )
 
@@ -210,3 +210,4 @@ def process_document_and_answer(blob_url: str, questions: List[str]) -> List[str
         answers.append(ans)
 
     return answers
+
