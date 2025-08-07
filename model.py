@@ -12,19 +12,26 @@ import mailparser
 from pinecone import Pinecone
 from openai import OpenAI
 
+# ---------------- ENV (LOCAL) ---------------
+
+# from dotenv import load_dotenv
+# load_dotenv()
+
 # ------------------ CONFIG ------------------
 
-PINECONE_API_KEY = "pcsk_28Ad9n_3ysjC12bv8Z91rEou1b9XiZ9RKb1QBF1n4uvKSF3Y9tCHPGJFy3utSi5CXcEDT9"
-PINECONE_REGION = "us-east-1"
-INDEX_NAME = "doc-index"
-NAMESPACE = "docspace"
-TOP_K = 8
-LLM_API_KEY = "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"
-LLM_MODEL = "openai/gpt-oss-120b"
-LLM_BASE_URL = "https://openrouter.ai/api/v1"
-EMBED_MODEL_NAME = "llama-text-embed-v2"
-CHUNK_SIZE = 1000
-CHUNK_OVERLAP = 200
+PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
+PINECONE_REGION = os.getenv("PINECONE_REGION")
+INDEX_NAME = os.getenv("INDEX_NAME")
+NAMESPACE = os.getenv("NAMESPACE")
+TOP_K = int(os.getenv("TOP_K"))
+TOP_N = int(os.getenv("TOP_N"))
+LLM_API_KEY = os.getenv("LLM_API_KEY")
+LLM_MODEL = os.getenv("LLM_MODEL")
+LLM_BASE_URL = os.getenv("LLM_BASE_URL")
+EMBED_MODEL_NAME = os.getenv("EMBED_MODEL_NAME")
+RERANKER_MODEL_NAME = os.getenv("RERANKER_MODEL_NAME")
+CHUNK_SIZE = int(os.getenv("CHUNK_SIZE"))
+CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP"))
 
 # Initialize Pinecone
 pc = Pinecone(api_key=PINECONE_API_KEY)
@@ -128,7 +135,17 @@ def retrieve_and_answer(question: str, blob_url: str):
     
     chunks = [hit.get("fields", {}).get("chunk_text", "") for hit in hits]
 
-    context = "\n\n".join(chunks)
+    final_results = pc.inference.rerank(
+        model=RERANKER_MODEL_NAME,
+        query=question,
+        documents=chunks,
+        top_n=TOP_N,
+        return_documents=True,
+    )
+
+    reranked_chunks = [item['document']['text'] for item in final_results.data]
+
+    context = "\n\n".join(reranked_chunks)
 
     fine_tuning_prompt = f"""
     You are a knowledgeable human assistant answering questions based on the given context. Your job is to provide short, direct answers only from the context provided (within 50 - 60 words) that solve the user's intent from the question. Follow these rules:
