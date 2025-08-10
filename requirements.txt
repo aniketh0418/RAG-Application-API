@@ -8,6 +8,6 @@ mail-parser
 langchain
 langchain-community
 pinecone
-pypdf
-openai
+google-generativeai
+mistralai
 dotenv
