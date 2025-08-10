@@ -11,3 +11,4 @@ pinecone
 google-generativeai
 mistralai
 dotenv
+openai
