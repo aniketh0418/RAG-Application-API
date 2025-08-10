@@ -5,17 +5,24 @@ from datetime import datetime
 from pymongo import MongoClient
 import os
 import time
-
 from model import process_document_and_answer
+
+# from dotenv import load_dotenv
+# load_dotenv()
+
+MONGODB_URI = os.getenv("MONGODB_URI")
+MONGODB_DB_NAME = os.getenv("MONGODB_DB_NAME")
+MONGODB_COLLECTION_NAME = os.getenv("MONGODB_COLLECTION_NAME")
+API_AUTHORIZED_TOKEN = os.getenv("API_AUTHORIZED_TOKEN")
 
 app = FastAPI()
 
-AUTHORIZED_TOKEN = "6a59087cab2c4d98677c22b8472cb4cac64d6968fea8507e9fcc2907a32f306a"
+AUTHORIZED_TOKEN = API_AUTHORIZED_TOKEN
 
 # --- MongoDB Setup ---
-client = MongoClient("mongodb+srv://rapoluav12:OksS0OdkF4K6Lzrd@cluster1.ys8mpam.mongodb.net/?retryWrites=true&w=majority&appName=Cluster1")
-db = client["hackrx_db"]
-collection = db["requests_log"]
+client = MongoClient(MONGODB_URI)
+db = client[MONGODB_DB_NAME]
+collection = db[MONGODB_COLLECTION_NAME]
 
 class QueryRequest(BaseModel):
     documents: str
