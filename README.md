@@ -69,3 +69,97 @@ RERANKER_MODEL_NAME=your_reranker_model_name
 CHUNK_SIZE=500
 CHUNK_OVERLAP=50
 ```
+---
+
+# 📦 Installation & Setup
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/aniketh0418/RAG-Application-API.git
+cd RAG-Application-API
+```
+
+### 2. Create virtual environment
+
+```bash
+python -m venv venv
+source venv/bin/activate  # Mac/Linux
+venv\Scripts\activate     # Windows
+```
+
+### 3. Install dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Running the API
+
+```bash
+uvicorn main:app --reload
+```
+
+By default, it runs at: `http://127.0.0.1:8000`
+
+---
+
+# 📡 API Usage
+
+### POST `http://127.0.0.1:8000/hackrx/run`
+
+# Headers:
+
+```bash
+Authorization: Bearer <YOUR_API_AUTHORIZED_TOKEN>
+Content-Type: application/json
+```
+
+# Body (sample):
+
+```bash
+{
+  "documents": "https://example.blob.core.windows.net/sample.pdf",
+  "questions": [
+    "What is the main objective of the document?",
+    "List the key statistics mentioned."
+  ]
+}
+```
+
+# Response (expected sample):
+
+```bash
+{
+  "answers": [
+    "The main objective is to provide a comprehensive overview of...",
+    "The key statistics mentioned are 45%, 20%, and 12%."
+  ]
+}
+```
+
+---
+
+# 🗄 Logging in MongoDB
+
+Each request is stored in the document format:
+
+```bash
+{
+  "date": "yyyy-mm-dd",
+  "time": "hh:mm:ss",
+  "doc_type": "pdf",
+  "doc_url": "https://example.blob.core.windows.net/sample.pdf",
+  "queries": ["What is the main objective of the document?", "List the key statistics mentioned."],
+  "answers": ["The main objective is to provide a comprehensive overview of...", "The key statistics mentioned are 45%, 20%, and 12%."],
+  "response_time_seconds": <response_time_recorded_in_seconds>
+}
+```
+
+---
+
+# 🔮 Future Improvements
+
+- Support for more document formats (e.g., .docx, .eml, .txt, .html)
+- Integration with multiple LLM providers
+- Asynchronous document processing for large uploads
