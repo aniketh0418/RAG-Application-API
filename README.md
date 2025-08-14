@@ -44,29 +44,26 @@ A Retrieval-Augmented Generation (RAG) API built with FastAPI, LangChain, Pineco
 - Stores metadata, queries, answers, and response time in MongoDB
 - Helps track API activity and logs
 
+---
+
 # 🔑 Environment Variables
 
 Create a `.env` file or set these in your environment:
 
-`MONGODB_URI=your_mongodb_connection_uri
-MONGODB_DB_NAME=your_mongodb_database_name
-MONGODB_COLLECTION_NAME=your_mongodb_collection_name
-API_AUTHORIZED_TOKEN=your_api_bearer_token
-
-PINECONE_API_KEY=your_pinecone_api_key
-PINECONE_REGION=us-east-1
-INDEX_NAME=your_pinecone_index_name
-NAMESPACE=your_pinecone_namespace
-
-TOP_K=10
-TOP_N=5
-
-LLM_API_KEY=your_llm_api_key
-LLM_MODEL=your_llm_model_name
-LLM_BASE_URL=your_llm_base_url
-
-EMBED_MODEL_NAME=your_embedding_model_name
-RERANKER_MODEL_NAME=your_reranker_model_name
-
-CHUNK_SIZE=500
-CHUNK_OVERLAP=50`
+`MONGODB_URI=your_mongodb_connection_uri`
+`MONGODB_DB_NAME=your_mongodb_database_name`
+`MONGODB_COLLECTION_NAME=your_mongodb_collection_name`
+`API_AUTHORIZED_TOKEN=your_api_bearer_token`
+`PINECONE_API_KEY=your_pinecone_api_key`
+`PINECONE_REGION=us-east-1`
+`INDEX_NAME=your_pinecone_index_name`
+`NAMESPACE=your_pinecone_namespace`
+`TOP_K=10`
+`TOP_N=5`
+`LLM_API_KEY=your_llm_api_key`
+`LLM_MODEL=your_llm_model_name`
+`LLM_BASE_URL=your_llm_base_url`
+`EMBED_MODEL_NAME=your_embedding_model_name`
+`RERANKER_MODEL_NAME=your_reranker_model_name`
+`CHUNK_SIZE=500`
+`CHUNK_OVERLAP=50`
