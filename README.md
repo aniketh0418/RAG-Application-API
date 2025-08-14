@@ -51,6 +51,7 @@ A Retrieval-Augmented Generation (RAG) API built with FastAPI, LangChain, Pineco
 Create a `.env` file or set these in your environment:
 
 `MONGODB_URI=your_mongodb_connection_uri`
+
 `MONGODB_DB_NAME=your_mongodb_database_name`
 `MONGODB_COLLECTION_NAME=your_mongodb_collection_name`
 `API_AUTHORIZED_TOKEN=your_api_bearer_token`
