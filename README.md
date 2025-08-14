@@ -48,7 +48,7 @@ A Retrieval-Augmented Generation (RAG) API built with FastAPI, LangChain, Pineco
 
 # 🔑 Environment Variables
 
-Create a `.env` file or set these in your environment:
+Create a `.env` file or set these in your environment (Don't change the variable values):
 
 ```bash
 MONGODB_URI=your_mongodb_connection_uri
